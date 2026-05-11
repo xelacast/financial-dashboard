@@ -141,7 +141,7 @@ export default async function DashboardPage() {
                   </div>
                   <span
                     className={`text-sm font-semibold ${
-                      tx.income ? "text-green-400" : "text-slate-grey-50"
+                      tx.income ? "text-success" : "text-slate-grey-50"
                     }`}
                   >
                     {tx.amount}
@@ -170,14 +170,14 @@ export default async function DashboardPage() {
                       {b.category}
                     </span>
                     <span
-                      className={`text-xs ${overBudget ? "text-red-400" : "text-dusty-lavender-400"}`}
+                      className={`text-xs ${overBudget ? "text-danger" : "text-dusty-lavender-400"}`}
                     >
                       ${b.spent} / ${b.limit}
                     </span>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-dusty-lavender-800">
                     <div
-                      className={`h-full rounded-full transition-all ${overBudget ? "bg-red-500" : "bg-midnight-violet-500"}`}
+                      className={`h-full rounded-full transition-all ${overBudget ? "bg-danger" : "bg-midnight-violet-500"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

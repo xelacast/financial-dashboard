@@ -18,6 +18,10 @@
   --color-midnight-violet-500: #f50a97;
   --color-midnight-violet-700: #93065b;
 
+  /* semantic status */
+  --color-success: #4ade80;
+  --color-danger: #f87171;
+
   /* shadcn semantic tokens mapped to design system */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -63,6 +67,8 @@
   --border: #372d39;
   --input: #372d39;
   --ring: #93065b;
+  --success: #4ade80;
+  --danger: #f87171;
 }
 
 @layer base {
