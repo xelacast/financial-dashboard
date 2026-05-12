@@ -15,6 +15,7 @@ interface SidebarProps {
 
 const NAV_LINKS = [
   { label: "Dashboard", href: "/dashboard", active: true },
+  { label: "Tracker", href: "/tracker", active: true },
   { label: "Transactions", href: "#", active: false },
   { label: "Budgets", href: "#", active: false },
   { label: "Accounts", href: "#", active: false },
