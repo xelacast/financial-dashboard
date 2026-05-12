@@ -5,6 +5,8 @@ import { api } from "~/trpc/react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 
+type AccountType = "checking" | "savings" | "credit_card" | "loan";
+
 type FinancialAccount = {
   id: string;
   name: string;
@@ -26,7 +28,7 @@ export function AccountSection({ accounts }: { accounts: FinancialAccount[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
-    type: "checking" as FinancialAccount["type"],
+    type: "checking" as AccountType,
     balance: "",
     isDebt: false,
   });
@@ -46,7 +48,7 @@ export function AccountSection({ accounts }: { accounts: FinancialAccount[] }) {
 
   function startEdit(a: FinancialAccount) {
     setEditingId(a.id);
-    setForm({ name: a.name, type: a.type, balance: String(a.balance), isDebt: a.isDebt });
+    setForm({ name: a.name, type: a.type as AccountType, balance: String(a.balance), isDebt: a.isDebt });
     setShowForm(true);
   }
 
@@ -55,7 +57,7 @@ export function AccountSection({ accounts }: { accounts: FinancialAccount[] }) {
     upsert.mutate({
       id: editingId ?? undefined,
       name: form.name,
-      type: form.type as "checking" | "savings" | "credit_card" | "loan",
+      type: form.type,
       balance: parseFloat(form.balance) || 0,
       isDebt: form.isDebt,
     });
@@ -96,7 +98,7 @@ export function AccountSection({ accounts }: { accounts: FinancialAccount[] }) {
             <select
               className="rounded bg-slate-grey-950 px-2 py-1 text-sm text-slate-grey-50"
               value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as AccountType }))}
             >
               {ACCOUNT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
