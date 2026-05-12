@@ -30,7 +30,10 @@ export function MonthDetail({ year, month }: MonthDetailProps) {
   const { data, isLoading } = api.tracker.getMonth.useQuery({ year, month });
 
   const updateEntry = api.tracker.updateMonthEntry.useMutation({
-    onSuccess: () => utils.tracker.getMonth.invalidate({ year, month }),
+    onSuccess: () => {
+      void utils.tracker.getMonth.invalidate({ year, month });
+      void utils.tracker.getYear.invalidate({ year });
+    },
   });
 
   const upsertItem = api.tracker.upsertLineItem.useMutation({
@@ -118,7 +121,7 @@ export function MonthDetail({ year, month }: MonthDetailProps) {
               size="sm"
               variant="outline"
               className="border-dusty-lavender-800 text-dusty-lavender-400 hover:text-slate-grey-50"
-              onClick={() => copyLast.mutate({ year: prevYear, month: prevMonth })}
+              onClick={() => copyLast.mutate({ year, month })}
               disabled={copyLast.isPending}
             >
               Copy from {MONTH_NAMES[prevMonth - 1]}
