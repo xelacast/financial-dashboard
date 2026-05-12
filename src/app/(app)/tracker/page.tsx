@@ -1,7 +1,8 @@
+import type { Metadata } from "next";
 import { HydrateClient, api } from "~/trpc/server";
 import { TrackerContent } from "./_components/tracker-content";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Finance Tracker",
 };
 
