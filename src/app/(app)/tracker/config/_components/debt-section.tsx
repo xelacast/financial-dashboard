@@ -45,7 +45,7 @@ export function DebtSection({ debts, accounts }: { debts: Debt[]; accounts: Fina
     setShowForm(true);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     upsert.mutate({
       id: editingId ?? undefined,

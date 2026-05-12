@@ -16,15 +16,22 @@ type LineItem = {
 
 type LineItemRowProps = {
   item: LineItem;
-  onInvalidate: () => void;
+  year: number;
+  month: number;
 };
 
-export function LineItemRow({ item, onInvalidate }: LineItemRowProps) {
+export function LineItemRow({ item, year, month }: LineItemRowProps) {
+  const utils = api.useUtils();
   const [editingAmount, setEditingAmount] = useState(false);
   const [amountDraft, setAmountDraft] = useState(String(item.amount));
 
-  const upsert = api.tracker.upsertLineItem.useMutation({ onSuccess: onInvalidate });
-  const remove = api.tracker.deleteLineItem.useMutation({ onSuccess: onInvalidate });
+  function invalidate() {
+    void utils.tracker.getMonth.invalidate({ year, month });
+    void utils.tracker.getYear.invalidate({ year });
+  }
+
+  const upsert = api.tracker.upsertLineItem.useMutation({ onSuccess: invalidate });
+  const remove = api.tracker.deleteLineItem.useMutation({ onSuccess: invalidate });
 
   function toggleChecked() {
     upsert.mutate({

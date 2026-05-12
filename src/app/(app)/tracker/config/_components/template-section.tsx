@@ -48,7 +48,7 @@ export function TemplateSection({ templates }: { templates: Template[] }) {
     setShowForm(true);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     upsert.mutate({
       id: editingId ?? undefined,
