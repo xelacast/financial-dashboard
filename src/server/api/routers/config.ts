@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -38,22 +39,28 @@ export const configRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       if (input.id) {
-        await ctx.db
+        const result = await ctx.db
           .update(recurringTemplate)
           .set({
             name: input.name,
             type: input.type,
             defaultAmount: input.defaultAmount,
             category: input.category,
-            updatedAt: new Date(),
           })
           .where(
             and(
               eq(recurringTemplate.id, input.id),
               eq(recurringTemplate.userId, userId),
             ),
-          );
-        return { id: input.id };
+          )
+          .returning({ id: recurringTemplate.id });
+        if (result.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Template not found",
+          });
+        }
+        return { id: result[0]!.id };
       }
       const id = crypto.randomUUID();
       await ctx.db.insert(recurringTemplate).values({
@@ -93,22 +100,28 @@ export const configRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       if (input.id) {
-        await ctx.db
+        const result = await ctx.db
           .update(financialAccount)
           .set({
             name: input.name,
             type: input.type,
             balance: input.balance,
             isDebt: input.isDebt,
-            updatedAt: new Date(),
           })
           .where(
             and(
               eq(financialAccount.id, input.id),
               eq(financialAccount.userId, userId),
             ),
-          );
-        return { id: input.id };
+          )
+          .returning({ id: financialAccount.id });
+        if (result.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Account not found",
+          });
+        }
+        return { id: result[0]!.id };
       }
       const id = crypto.randomUUID();
       await ctx.db.insert(financialAccount).values({
@@ -147,18 +160,42 @@ export const configRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+      if (input.accountId) {
+        const [acct] = await ctx.db
+          .select({ id: financialAccount.id })
+          .from(financialAccount)
+          .where(
+            and(
+              eq(financialAccount.id, input.accountId),
+              eq(financialAccount.userId, userId),
+            ),
+          )
+          .limit(1);
+        if (!acct) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid accountId",
+          });
+        }
+      }
       if (input.id) {
-        await ctx.db
+        const result = await ctx.db
           .update(debt)
           .set({
             name: input.name,
             totalOwed: input.totalOwed,
             monthlyPayment: input.monthlyPayment,
             accountId: input.accountId,
-            updatedAt: new Date(),
           })
-          .where(and(eq(debt.id, input.id), eq(debt.userId, userId)));
-        return { id: input.id };
+          .where(and(eq(debt.id, input.id), eq(debt.userId, userId)))
+          .returning({ id: debt.id });
+        if (result.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Debt not found",
+          });
+        }
+        return { id: result[0]!.id };
       }
       const id = crypto.randomUUID();
       await ctx.db.insert(debt).values({
