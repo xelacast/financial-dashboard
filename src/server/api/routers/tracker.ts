@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
@@ -18,34 +18,40 @@ export const trackerRouter = createTRPCRouter({
           and(eq(monthEntry.userId, userId), eq(monthEntry.year, input.year)),
         );
 
-      const result = await Promise.all(
-        entries.map(async (entry) => {
-          const items = await ctx.db
-            .select()
-            .from(lineItem)
-            .where(eq(lineItem.monthEntryId, entry.id));
-          const realItems = items.filter((i) => !i.isHypothetical);
-          const totalIncome = realItems
-            .filter((i) => i.type === "income")
-            .reduce((sum, i) => sum + i.amount, 0);
-          const totalExpenses = realItems
-            .filter((i) => i.type === "expense")
-            .reduce((sum, i) => sum + i.amount, 0);
-          const checkedIncome = realItems
-            .filter((i) => i.type === "income" && i.isChecked)
-            .reduce((sum, i) => sum + i.amount, 0);
-          const checkedExpenses = realItems
-            .filter((i) => i.type === "expense" && i.isChecked)
-            .reduce((sum, i) => sum + i.amount, 0);
-          return {
-            ...entry,
-            projectedCashFlow: totalIncome - totalExpenses,
-            actualCashFlow: checkedIncome - checkedExpenses,
-          };
-        }),
-      );
+      if (entries.length === 0) return [];
 
-      return result;
+      const entryIds = entries.map((e) => e.id);
+      const allItems = await ctx.db
+        .select()
+        .from(lineItem)
+        .where(
+          and(
+            inArray(lineItem.monthEntryId, entryIds),
+            eq(lineItem.userId, userId),
+          ),
+        );
+
+      return entries.map((entry) => {
+        const items = allItems.filter((i) => i.monthEntryId === entry.id);
+        const realItems = items.filter((i) => !i.isHypothetical);
+        const totalIncome = realItems
+          .filter((i) => i.type === "income")
+          .reduce((sum, i) => sum + i.amount, 0);
+        const totalExpenses = realItems
+          .filter((i) => i.type === "expense")
+          .reduce((sum, i) => sum + i.amount, 0);
+        const checkedIncome = realItems
+          .filter((i) => i.type === "income" && i.isChecked)
+          .reduce((sum, i) => sum + i.amount, 0);
+        const checkedExpenses = realItems
+          .filter((i) => i.type === "expense" && i.isChecked)
+          .reduce((sum, i) => sum + i.amount, 0);
+        return {
+          ...entry,
+          projectedCashFlow: totalIncome - totalExpenses,
+          actualCashFlow: checkedIncome - checkedExpenses,
+        };
+      });
     }),
 
   // Returns a single month entry with all line items. Auto-creates + populates
@@ -74,50 +80,66 @@ export const trackerRouter = createTRPCRouter({
 
       if (!entry) {
         const id = crypto.randomUUID();
-        await ctx.db.insert(monthEntry).values({
-          id,
-          userId,
-          year: input.year,
-          month: input.month,
-          startingBalance: 0,
-          notes: "",
-        });
 
-        const templates = await ctx.db
-          .select()
-          .from(recurringTemplate)
-          .where(eq(recurringTemplate.userId, userId));
+        await ctx.db
+          .insert(monthEntry)
+          .values({
+            id,
+            userId,
+            year: input.year,
+            month: input.month,
+            startingBalance: 0,
+            notes: "",
+          })
+          .onConflictDoNothing();
 
-        if (templates.length > 0) {
-          await ctx.db.insert(lineItem).values(
-            templates.map((t) => ({
-              id: crypto.randomUUID(),
-              monthEntryId: id,
-              userId,
-              name: t.name,
-              type: t.type,
-              amount: t.defaultAmount,
-              category: t.category,
-              isChecked: false,
-              isHypothetical: false,
-              templateId: t.id,
-            })),
-          );
-        }
-
-        const [newEntry] = await ctx.db
+        // Re-fetch regardless — either we inserted or the concurrent request did
+        const [fetched] = await ctx.db
           .select()
           .from(monthEntry)
-          .where(eq(monthEntry.id, id))
+          .where(
+            and(
+              eq(monthEntry.userId, userId),
+              eq(monthEntry.year, input.year),
+              eq(monthEntry.month, input.month),
+            ),
+          )
           .limit(1);
 
-        entry = newEntry!;
+        entry = fetched!;
+
+        // Only seed templates if we actually inserted (check by id)
+        if (entry.id === id) {
+          const templates = await ctx.db
+            .select()
+            .from(recurringTemplate)
+            .where(eq(recurringTemplate.userId, userId));
+
+          if (templates.length > 0) {
+            await ctx.db.insert(lineItem).values(
+              templates.map((t) => ({
+                id: crypto.randomUUID(),
+                monthEntryId: id,
+                userId,
+                name: t.name,
+                type: t.type,
+                amount: t.defaultAmount,
+                category: t.category,
+                isChecked: false,
+                isHypothetical: false,
+                templateId: t.id,
+              })),
+            );
+          }
+        }
       }
 
       const items = await ctx.db
         .select()
         .from(lineItem)
-        .where(eq(lineItem.monthEntryId, entry.id));
+        .where(
+          and(eq(lineItem.monthEntryId, entry.id), eq(lineItem.userId, userId)),
+        );
 
       return { entry, items };
     }),
@@ -125,7 +147,7 @@ export const trackerRouter = createTRPCRouter({
   updateMonthEntry: protectedProcedure
     .input(
       z.object({
-        year: z.number().int(),
+        year: z.number().int().min(2000).max(2100),
         month: z.number().int().min(1).max(12),
         startingBalance: z.number().optional(),
         notes: z.string().optional(),
