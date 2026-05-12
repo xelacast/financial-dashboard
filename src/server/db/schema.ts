@@ -265,3 +265,27 @@ export const debt = sqliteTable(
   }),
   (t) => [index("debt_user_id_idx").on(t.userId)],
 );
+
+export const financialAccountRelations = relations(financialAccount, ({ one }) => ({
+  user: one(user, { fields: [financialAccount.userId], references: [user.id] }),
+}));
+
+export const recurringTemplateRelations = relations(recurringTemplate, ({ one }) => ({
+  user: one(user, { fields: [recurringTemplate.userId], references: [user.id] }),
+}));
+
+export const monthEntryRelations = relations(monthEntry, ({ many, one }) => ({
+  user: one(user, { fields: [monthEntry.userId], references: [user.id] }),
+  lineItems: many(lineItem),
+}));
+
+export const lineItemRelations = relations(lineItem, ({ one }) => ({
+  monthEntry: one(monthEntry, { fields: [lineItem.monthEntryId], references: [monthEntry.id] }),
+  template: one(recurringTemplate, { fields: [lineItem.templateId], references: [recurringTemplate.id] }),
+  user: one(user, { fields: [lineItem.userId], references: [user.id] }),
+}));
+
+export const debtRelations = relations(debt, ({ one }) => ({
+  user: one(user, { fields: [debt.userId], references: [user.id] }),
+  account: one(financialAccount, { fields: [debt.accountId], references: [financialAccount.id] }),
+}));
